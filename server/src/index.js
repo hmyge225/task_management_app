@@ -2,6 +2,8 @@ const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
+const helmet = require('helmet');
+const compression = require('compression');
 const dotenv = require('dotenv');
 const connectToDatabase = require('./config/db');
 const authRoutes = require('./routes/auth.routes');
@@ -14,9 +16,11 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 const app = express();
 
 // Global middlewares
-app.use(cors());
-app.use(express.json());
-app.use(morgan('dev'));
+app.use(cors({ origin: process.env.CORS_ORIGIN?.split(',') || '*', credentials: true }));
+app.use(express.json({ limit: '1mb' }));
+app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+app.use(helmet());
+app.use(compression());
 
 // API routes
 app.use('/api/auth', authRoutes);

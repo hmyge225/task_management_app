@@ -18,10 +18,21 @@ npm start      # démarre en mode production
 Endpoints principaux:
 - POST `/api/auth/register`
 - POST `/api/auth/login`
-- GET `/api/tasks` (auth)
+- GET `/api/auth/me` (auth)
+- PUT `/api/auth/me` (auth)
+- POST `/api/auth/change-password` (auth)
+- GET `/api/tasks` (auth) avec filtres, recherche, pagination, tri
 - GET `/api/tasks/:id` (auth)
 - POST `/api/tasks` (auth)
 - PUT `/api/tasks/:id` (auth)
-- DELETE `/api/tasks/:id` (auth)
+- DELETE `/api/tasks/:id` (soft delete)
+- POST `/api/tasks/:id/restore`
+- DELETE `/api/tasks/:id/permanent`
+- POST `/api/tasks/:id/checklist`
+- PATCH `/api/tasks/:id/checklist/:itemId`
+- DELETE `/api/tasks/:id/checklist/:itemId`
+- POST `/api/tasks/bulk/status`
+- POST `/api/tasks/bulk/delete`
+- GET `/api/tasks/stats/summary`
 
 

@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import UserInfo from '../components/UserInfo';
 
 export default function Tasks() {
   const { user, logout } = useAuth();
@@ -36,6 +35,17 @@ export default function Tasks() {
 		}
 	};
 
+  const [filters, setFilters] = useState({ q: '', status: '', priority: '', sortBy: 'createdAt', sortOrder: 'desc' });
+  const [meta, setMeta] = useState({ page: 1, totalPages: 1 });
+  const [selectedIds, setSelectedIds] = useState([]);
+
+  const fetchTasks = async (page = 1) => {
+    const params = { ...filters, page };
+    const { data } = await api.get('/api/tasks', { params });
+    setTasks(data.items || data); // compatibilité
+    if (data.meta) setMeta(data.meta);
+  };
+
   useEffect(() => {
     if (!user) {
       navigate('/login');
@@ -43,15 +53,15 @@ export default function Tasks() {
     }
     (async () => {
       try {
-        const { data } = await api.get('/api/tasks');
-        setTasks(data);
+        await fetchTasks(1);
       } catch (err) {
         setError('Impossible de charger les tâches');
       } finally {
         setLoading(false);
       }
     })();
-  }, [user, navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, navigate, filters.status, filters.priority, filters.sortBy, filters.sortOrder]);
 
   const handleCreate = async (e) => {
     e.preventDefault();
@@ -121,7 +131,6 @@ export default function Tasks() {
     <div className="container">
       <header className="toolbar">
         <h1>Mes tâches</h1>
-        <UserInfo user={user} onLogout={logout} />
       </header>
 
       {error && <p className="error">{error}</p>}
@@ -162,6 +171,41 @@ export default function Tasks() {
         <button className="btn btn-primary" disabled={saving} type="submit">{saving ? 'Ajout...' : 'Ajouter'}</button>
       </motion.form>
 
+      <div className="card">
+        <div className="filters">
+          <input placeholder="Rechercher..." value={filters.q} onChange={(e) => setFilters((f) => ({ ...f, q: e.target.value }))} />
+          <select value={filters.status} onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))}>
+            <option value="">Tous les états</option>
+            <option value="todo">A faire</option>
+            <option value="in_progress">En cours</option>
+            <option value="done">Terminée</option>
+          </select>
+          <select value={filters.priority} onChange={(e) => setFilters((f) => ({ ...f, priority: e.target.value }))}>
+            <option value="">Toutes priorités</option>
+            <option value="low">Faible</option>
+            <option value="medium">Moyenne</option>
+            <option value="high">Haute</option>
+          </select>
+          <select value={filters.sortBy} onChange={(e) => setFilters((f) => ({ ...f, sortBy: e.target.value }))}>
+            <option value="createdAt">Création</option>
+            <option value="dueDate">Echéance</option>
+            <option value="title">Titre</option>
+          </select>
+          <select value={filters.sortOrder} onChange={(e) => setFilters((f) => ({ ...f, sortOrder: e.target.value }))}>
+            <option value="desc">Desc</option>
+            <option value="asc">Asc</option>
+          </select>
+        </div>
+
+        {selectedIds.length > 0 && (
+          <div className="bulkbar" style={{ marginTop: 12 }}>
+            <span className="count">{selectedIds.length} sélectionnée(s)</span>
+            <button className="btn" onClick={async () => { await api.post('/api/tasks/bulk/status', { ids: selectedIds, status: 'done' }); setSelectedIds([]); fetchTasks(meta.page); }}>Marquer terminées</button>
+            <button className="btn btn-danger" onClick={async () => { await api.post('/api/tasks/bulk/delete', { ids: selectedIds }); setSelectedIds([]); fetchTasks(meta.page); }}>Supprimer</button>
+          </div>
+        )}
+      </div>
+
 		<ul className="list">
 			<AnimatePresence initial={false}>
 			{tasks.map((task) => (
@@ -201,7 +245,7 @@ export default function Tasks() {
 						</form>
 					) : (
 						<>
-							<div className="row">
+          <div className="row">
 								<strong>{task.title}</strong>
 								<div className="actions">
                   <select
@@ -228,6 +272,13 @@ export default function Tasks() {
 			))}
 			</AnimatePresence>
 		</ul>
+
+      <div className="row" style={{ justifyContent: 'flex-end' }}>
+        <div>
+          <button className="btn" disabled={meta.page <= 1} onClick={() => fetchTasks(meta.page - 1)}>Précédent</button>
+          <button className="btn" style={{ marginLeft: 8 }} disabled={meta.page >= meta.totalPages} onClick={() => fetchTasks(meta.page + 1)}>Suivant</button>
+        </div>
+      </div>
     </div>
   );
 }
